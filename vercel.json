@@ -3,9 +3,14 @@
     "api/diagram-to-png.ts": {
       "maxDuration": 10,
       "memory": 256
+    },
+    "api/render.js": {
+      "maxDuration": 15,
+      "memory": 128
     }
   },
   "rewrites": [
-    { "source": "/convert", "destination": "/api/diagram-to-png" }
+    { "source": "/convert", "destination": "/api/diagram-to-png" },
+    { "source": "/render", "destination": "/api/render" }
   ]
 }

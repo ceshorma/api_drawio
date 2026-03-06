@@ -207,6 +207,55 @@ sankey-beta          - Diagramas Sankey
 | `scale` | 1 | 4 | Multiplica la resolución final |
 | `content` | 1 char | 500KB | — |
 
+---
+
+## Endpoint: Render (proxy a export.diagrams.net)
+
+Endpoint ligero que actúa como proxy autenticado hacia el servicio de exportación de diagrams.net. No usa Puppeteer ni dependencias pesadas — solo hace fetch al servicio externo.
+
+```
+POST /api/render
+POST /render  (alias)
+```
+
+### Autenticación
+
+Requiere header `Authorization: Bearer <token>` donde el token debe coincidir con la variable de entorno `API_SECRET` configurada en Vercel.
+
+### Parámetros del request (JSON body)
+
+| Parámetro | Tipo   | Requerido | Default | Descripción                        |
+|-----------|--------|-----------|---------|------------------------------------|
+| `xml`     | string | Sí        | —       | XML de draw.io (mxGraphModel)      |
+| `scale`   | number | No        | 2       | Factor de escala (1-4)             |
+
+### Respuestas
+
+| Status | Descripción                                |
+|--------|--------------------------------------------|
+| 200    | PNG binario (`Content-Type: image/png`)    |
+| 400    | xml ausente o vacío                        |
+| 401    | Token ausente o incorrecto                 |
+| 405    | Método no permitido (usar POST)            |
+| 502    | Error del servicio export.diagrams.net     |
+
+### Ejemplo con curl
+
+```bash
+curl -X POST https://TU-APP.vercel.app/api/render \
+  -H "Authorization: Bearer TU-API-SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"xml":"<mxGraphModel><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"2\" value=\"Hello\" style=\"rounded=1;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"100\" y=\"100\" width=\"120\" height=\"60\" as=\"geometry\"/></mxCell></root></mxGraphModel>"}' \
+  --output diagrama.png
+```
+
+### Setup
+
+1. Configura `API_SECRET` en Vercel: Settings → Environment Variables → Production
+2. Usa el mismo valor como Bearer token en tus requests
+
+---
+
 ## Stack técnico
 
 - **Runtime**: Vercel Serverless Functions (Node.js)
