@@ -9,6 +9,7 @@
     "deploy": "vercel --prod"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@resvg/resvg-js": "^2.6.2",
     "jsdom": "^25.0.1",
     "mermaid": "^11.4.1"
