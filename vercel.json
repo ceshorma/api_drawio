@@ -2,7 +2,10 @@
   "functions": {
     "api/diagram-to-png.ts": {
       "maxDuration": 60,
-      "memory": 1024
+      "memory": 3009
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/convert", "destination": "/api/diagram-to-png" }
+  ]
 }

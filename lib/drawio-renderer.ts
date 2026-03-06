@@ -1,20 +1,27 @@
 import { getBrowser } from "./browser";
 
+export interface DrawioOptions {
+  scale?: number;
+  width?: number;
+  height?: number;
+}
+
 export async function renderDrawio(
   xmlContent: string,
-  scale: number = 2
+  options: DrawioOptions = {}
 ): Promise<Buffer> {
+  const { scale = 2, width = 1920, height = 1080 } = options;
+
   const browser = await getBrowser();
   const page = await browser.newPage();
 
   try {
     await page.setViewport({
-      width: 1920,
-      height: 1080,
+      width,
+      height,
       deviceScaleFactor: scale,
     });
 
-    // Encode the XML for safe embedding in the data attribute
     const encodedXml = JSON.stringify({
       highlight: "#0000ff",
       nav: false,
@@ -57,14 +64,11 @@ export async function renderDrawio(
 
     // Wait for draw.io viewer to render the diagram
     await page.waitForSelector(".geDiagramContainer", { timeout: 15000 });
-
-    // Wait for SVG content inside the container
     await page.waitForSelector(".geDiagramContainer svg", { timeout: 10000 });
 
     // Small delay for any final rendering
     await new Promise((r) => setTimeout(r, 500));
 
-    // Get the diagram container and screenshot it
     const element = await page.$(".geDiagramContainer");
     if (!element) {
       throw new Error("Failed to find rendered draw.io diagram container");
