@@ -1,4 +1,5 @@
-import { getBrowser } from "./browser";
+import { JSDOM } from "jsdom";
+import { Resvg } from "@resvg/resvg-js";
 
 export interface MermaidOptions {
   scale?: number;
@@ -17,8 +18,6 @@ export async function renderMermaid(
 ): Promise<Buffer> {
   const {
     scale = 2,
-    width = 1920,
-    height = 1080,
     theme = "default",
     fontFamily,
     fontSize,
@@ -26,105 +25,54 @@ export async function renderMermaid(
 
   const safeTheme = VALID_THEMES.includes(theme) ? theme : "default";
 
-  const browser = await getBrowser();
-  const page = await browser.newPage();
+  // Create a jsdom instance to provide DOM for mermaid
+  const dom = new JSDOM("<!DOCTYPE html><html><body><div id=\"container\"></div></body></html>", {
+    pretendToBeVisual: true,
+  });
+
+  // Set globals that mermaid expects
+  const { window } = dom;
+  (global as any).window = window;
+  (global as any).document = window.document;
+  (global as any).navigator = window.navigator;
+  (global as any).DOMParser = window.DOMParser;
+  (global as any).XMLSerializer = window.XMLSerializer;
 
   try {
-    await page.setViewport({
-      width,
-      height,
-      deviceScaleFactor: scale,
-    });
+    // Dynamic import to ensure globals are set before mermaid loads
+    const mermaid = (await import("mermaid")).default;
 
-    // Build themeVariables for mermaid.initialize()
     const themeVariables: Record<string, string> = {};
     if (fontFamily) themeVariables.fontFamily = fontFamily;
     if (fontSize) themeVariables.fontSize = fontSize;
 
-    const mermaidConfig = JSON.stringify({
+    mermaid.initialize({
       startOnLoad: false,
-      theme: safeTheme,
-      securityLevel: "strict",
+      theme: safeTheme as any,
+      securityLevel: "loose",
       ...(Object.keys(themeVariables).length > 0 && { themeVariables }),
     });
 
-    // Build Google Fonts <link> if a fontFamily is specified
-    const googleFontLink = fontFamily
-      ? `<link href="https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily.split(",")[0].trim())}:wght@400;700&display=swap" rel="stylesheet">`
-      : "";
+    const { svg: svgString } = await mermaid.render("diagram", content);
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        ${googleFontLink}
-        <style>
-          body {
-            background: transparent;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-          }
-          #container {
-            background: transparent;
-            padding: 20px;
-          }
-        </style>
-      </head>
-      <body>
-        <div id="container"></div>
-        <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-        <script>
-          (async () => {
-            try {
-              mermaid.initialize(${mermaidConfig});
-              const { svg } = await mermaid.render('diagram', ${JSON.stringify(content)});
-              document.getElementById('container').innerHTML = svg;
-              document.getElementById('container').dataset.rendered = 'true';
-            } catch (e) {
-              document.getElementById('container').dataset.error = e.message || 'Unknown render error';
-              document.getElementById('container').dataset.rendered = 'error';
-            }
-          })();
-        </script>
-      </body>
-      </html>
-    `;
-
-    await page.setContent(html, { waitUntil: "networkidle0" });
-
-    // Wait for rendering to complete
-    await page.waitForFunction(
-      () => {
-        const el = document.getElementById("container");
-        return el?.dataset.rendered === "true" || el?.dataset.rendered === "error";
+    // Convert SVG to PNG using resvg
+    const resvg = new Resvg(svgString, {
+      fitTo: {
+        mode: "zoom",
+        value: scale,
       },
-      { timeout: 15000 }
-    );
-
-    // Check for render errors
-    const renderError = await page.$eval("#container", (el) =>
-      (el as HTMLElement).dataset.error
-    ).catch(() => null);
-
-    if (renderError) {
-      throw new Error(`Mermaid syntax error: ${renderError}`);
-    }
-
-    const element = await page.$("#container");
-    if (!element) {
-      throw new Error("Failed to find rendered diagram container");
-    }
-
-    const screenshot = await element.screenshot({
-      type: "png",
-      omitBackground: true,
+      background: "rgba(0, 0, 0, 0)",
     });
 
-    return Buffer.from(screenshot);
+    const pngData = resvg.render();
+    return Buffer.from(pngData.asPng());
   } finally {
-    await page.close();
+    // Clean up globals
+    delete (global as any).window;
+    delete (global as any).document;
+    delete (global as any).navigator;
+    delete (global as any).DOMParser;
+    delete (global as any).XMLSerializer;
+    dom.window.close();
   }
 }
