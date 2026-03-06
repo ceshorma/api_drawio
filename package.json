@@ -1,0 +1,20 @@
+{
+  "name": "api-drawio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API to convert Mermaid and draw.io XML diagrams to PNG",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "tsc",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@sparticuz/chromium-min": "^143.0.0",
+    "puppeteer-core": "^24.38.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@vercel/node": "^5.0.0",
+    "typescript": "^5.0.0"
+  }
+}
