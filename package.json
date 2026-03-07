@@ -5,7 +5,7 @@
   "description": "API to convert Mermaid and draw.io XML diagrams to PNG (no browser required)",
   "scripts": {
     "dev": "vercel dev",
-    "build": "tsc",
+    "build": "echo 'Serverless functions only — no build output'",
     "deploy": "vercel --prod"
   },
   "dependencies": {
